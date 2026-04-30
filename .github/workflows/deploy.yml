@@ -1,0 +1,37 @@
+name: Deploy Static Site to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Copy files to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: '.'
+          target: '/tmp/mywebsite'
+
+      - name: Deploy on EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            sudo rm -rf /var/www/mywebsite/*
+            sudo cp -r /tmp/mywebsite/. /var/www/mywebsite/
+            sudo chown -R nginx:nginx /var/www/mywebsite
+            sudo chmod -R 755 /var/www/mywebsite
+            sudo systemctl reload nginx
+            echo "✅ Deployment successful!"
